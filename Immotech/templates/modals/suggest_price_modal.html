@@ -1,0 +1,32 @@
+<!-- Modal Suggérer un Prix -->
+<div class="modal fade" id="suggestPriceModal" tabindex="-1" aria-labelledby="suggestPriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="suggestPriceModalLabel">Suggérer un prix</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('suggest_property_price', property_id=property._id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="suggested_price" class="form-label">Prix suggéré</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="suggested_price" name="suggested_price" required min="0" step="0.01">
+                            <span class="input-group-text">DH</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="justification" class="form-label">Justification</label>
+                        <textarea class="form-control" id="justification" name="justification" rows="4" required
+                                placeholder="Expliquez pourquoi vous suggérez ce prix (comparables, état du marché, etc.)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Envoyer la suggestion</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

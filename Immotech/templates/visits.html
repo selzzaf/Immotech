@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des visites{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Gestion des Visites</h2>
+
+    {% if current_user.is_agent() %}
+    <div class="mb-4">
+        <h3>Demandes de Visites en Attente</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Bien</th>
+                        <th>Client</th>
+                        <th>Date Proposée</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in visits if visit.status == 'pending' %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('view_property', property_id=visit.property_id) }}">
+                                {{ properties[visit.property_id|string].title }}
+                            </a>
+                        </td>
+                        <td>{{ visit.client_name }}</td>
+                        <td>{{ visit.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ visit.notes }}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="confirmVisit('{{ visit._id }}')">
+                                Confirmer
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="modifyVisit('{{ visit._id }}')">
+                                Modifier
+                            </button>
+                            <button class="btn btn-info btn-sm" onclick="contactClient('{{ visit._id }}')">
+                                Contacter Client
+                            </button>
+                            <button class="btn btn-warning btn-sm" onclick="contactOwner('{{ visit.property_id }}')">
+                                Contacter Propriétaire
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h3>Visites Programmées</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Bien</th>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in visits if visit.status == 'confirmed' %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('view_property', property_id=visit.property_id) }}">
+                                {{ properties[visit.property_id|string].title }}
+                            </a>
+                        </td>
+                        <td>{{ visit.client_name }}</td>
+                        <td>{{ visit.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <span class="badge bg-{{ visit.status|status_color }}">
+                                {{ visit.status|status_label }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="completeVisit('{{ visit._id }}')">
+                                Terminer
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="cancelVisit('{{ visit._id }}')">
+                                Annuler
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <!-- Vue pour les clients et propriétaires -->
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Bien</th>
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for visit in visits %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('view_property', property_id=visit.property_id) }}">
+                            {{ properties[visit.property_id|string].title }}
+                        </a>
+                    </td>
+                    <td>{{ visit.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <span class="badge bg-{{ visit.status|status_color }}">
+                            {{ visit.status|status_label }}
+                        </span>
+                    </td>
+                    <td>{{ visit.notes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal pour modifier une visite -->
+<div class="modal fade" id="modifyVisitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier la Visite</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="modifyVisitForm">
+                <div class="modal-body">
+                    <input type="hidden" id="visitId" name="visit_id">
+                    <div class="mb-3">
+                        <label for="newDate" class="form-label">Nouvelle Date</label>
+                        <input type="datetime-local" class="form-control" id="newDate" name="new_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="visitNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="visitNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour contacter le client -->
+<div class="modal fade" id="contactClientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Contacter le Client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="contactClientForm">
+                <div class="modal-body">
+                    <input type="hidden" id="clientVisitId" name="visit_id">
+                    <div class="mb-3">
+                        <label for="messageSubject" class="form-label">Sujet</label>
+                        <input type="text" class="form-control" id="messageSubject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageContent" class="form-label">Message</label>
+                        <textarea class="form-control" id="messageContent" name="content" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Envoyer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour contacter le propriétaire -->
+<div class="modal fade" id="contactOwnerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Contacter le Propriétaire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="contactOwnerForm">
+                <div class="modal-body">
+                    <input type="hidden" id="propertyId" name="property_id">
+                    <div class="mb-3">
+                        <label for="ownerMessageSubject" class="form-label">Sujet</label>
+                        <input type="text" class="form-control" id="ownerMessageSubject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ownerMessageContent" class="form-label">Message</label>
+                        <textarea class="form-control" id="ownerMessageContent" name="content" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Envoyer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmVisit(visitId) {
+    if (confirm('Confirmer cette visite ?')) {
+        fetch(`/visit/${visitId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'confirmed'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+}
+
+function modifyVisit(visitId) {
+    document.getElementById('visitId').value = visitId;
+    const modal = new bootstrap.Modal(document.getElementById('modifyVisitModal'));
+    modal.show();
+}
+
+function contactClient(visitId) {
+    document.getElementById('clientVisitId').value = visitId;
+    const modal = new bootstrap.Modal(document.getElementById('contactClientModal'));
+    modal.show();
+}
+
+function contactOwner(propertyId) {
+    document.getElementById('propertyId').value = propertyId;
+    const modal = new bootstrap.Modal(document.getElementById('contactOwnerModal'));
+    modal.show();
+}
+
+function completeVisit(visitId) {
+    if (confirm('Marquer cette visite comme terminée ?')) {
+        fetch(`/visit/${visitId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'completed'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+}
+
+function cancelVisit(visitId) {
+    if (confirm('Annuler cette visite ?')) {
+        fetch(`/visit/${visitId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: 'cancelled'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+}
+
+document.getElementById('modifyVisitForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch(`/visit/${formData.get('visit_id')}/modify`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+});
+
+document.getElementById('contactClientForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch('/message/send', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+});
+
+document.getElementById('contactOwnerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch('/message/send', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}{{ property.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}">Accueil</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ property.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Titre -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h2 class="card-title">{{ property.title }}</h2>
+                </div>
+            </div>
+
+            <!-- Images du bien -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    {% if property.images and property.images|length > 0 %}
+                    <div id="propertyCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            {% for image in property.images %}
+                            <div class="carousel-item {% if loop.first %}active{% endif %}">
+                                <img src="{{ image }}" class="d-block w-100" alt="Image {{ loop.index }}">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if property.images|length > 1 %}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#propertyCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Précédent</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#propertyCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Suivant</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 bg-light">
+                        <i class="fas fa-home fa-4x text-secondary"></i>
+                        <p class="mt-3 text-muted">Aucune image disponible</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3>Description</h3>
+                    <p>{{ property.description or 'Aucune description disponible.' }}</p>
+                </div>
+            </div>
+
+            <!-- Caractéristiques -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3>Caractéristiques</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-ruler-combined"></i> Surface : {{ property.surface|default(0) }} m²</li>
+                                <li><i class="fas fa-door-open"></i> Pièces : {{ property.rooms|default(0) }}</li>
+                                <li><i class="fas fa-map-marker-alt"></i> Ville : {{ property.location.city|default('Non spécifiée') }}</li>
+                                <li><i class="fas fa-tag"></i> Type : {{ property.type|default('Non spécifié')|title }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                {% if property.features %}
+                                    {% for feature in property.features %}
+                                    <li><i class="fas fa-check"></i> {{ feature }}</li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-muted">Aucune caractéristique spécifiée</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if property.location %}
+            <!-- Localisation -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="card-title">Localisation</h3>
+                    <address>
+                        {{ property.location.address|default('') }}<br>
+                        {{ property.location.postal_code|default('') }} {{ property.location.city|default('Non spécifiée') }}
+                    </address>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <!-- Prix et actions -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary mb-4">{{ property.price|default(0)|number_format }} DH</h3>
+                    
+                    {% if current_user.is_authenticated %}
+                        {% if user_role == 'client' %}
+                        <button class="btn btn-primary btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#visitRequestModal">
+                            <i class="fas fa-calendar-check"></i> Demander une visite
+                        </button>
+                        
+                        <button class="btn btn-outline-primary btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
+                            <i class="fas fa-envelope"></i> Contacter l'agent
+                        </button>
+                        {% endif %}
+
+                        {% if user_role == 'agent' %}
+                        <button class="btn btn-warning btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#suggestPriceModal">
+                            <i class="fas fa-tags"></i> Suggérer un prix
+                        </button>
+                        <button class="btn btn-outline-primary btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#contactOwnerModal">
+                            <i class="fas fa-envelope"></i> Contacter le propriétaire
+                        </button>
+                        {% endif %}
+
+                        {% if user_role == 'owner' %}
+                        <div class="btn-group w-100 mb-2">
+                            <a href="{{ url_for('edit_property', property_id=property._id) }}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> Modifier
+                            </a>
+                            <a href="{{ url_for('create_property_offer', property_id=property._id) }}" class="btn btn-outline-success">
+                                <i class="fas fa-tag"></i> Créer une offre
+                            </a>
+                        </div>
+                        <a href="{{ url_for('assign_agent', property_id=property._id) }}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-user-tie"></i> {% if property.agent_id %}Changer l'agent{% else %}Assigner un agent{% endif %}
+                        </a>
+                        {% if property.agent_id %}
+                        <button class="btn btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
+                            <i class="fas fa-envelope"></i> Contacter l'agent
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('view_messages') }}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="fas fa-envelope"></i> Voir mes messages
+                            {% if unread_messages_count > 0 %}
+                            <span class="badge bg-danger">{{ unread_messages_count }}</span>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+
+                        {% if user_role == 'admin' %}
+                        <button type="button" class="btn btn-danger w-100" onclick="deleteProperty('{{ property._id }}')">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </button>
+                        {% endif %}
+
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('view_property_offers', property_id=property._id) }}" class="btn btn-outline-info mb-3">
+                            <i class="fas fa-tags"></i> Voir les offres
+                        </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-sign-in-alt"></i> Connectez-vous pour interagir
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informations sur l'agent -->
+            {% if agent %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">
+                        <i class="fas fa-user-tie"></i> Agent immobilier
+                    </h4>
+                    <p class="card-text">
+                        <strong>{{ agent.username }}</strong><br>
+                        {% if agent.email %}
+                        <i class="fas fa-envelope"></i> {{ agent.email }}<br>
+                        {% endif %}
+                        {% if agent.phone %}
+                        <i class="fas fa-phone"></i> {{ agent.phone }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+{% if current_user.is_authenticated and user_role == 'client' %}
+{% include 'modals/visit_request_modal.html' %}
+{% include 'modals/contact_agent_modal.html' %}
+{% endif %}
+
+{% if current_user.is_authenticated and user_role == 'owner' and property.agent_id %}
+{% include 'modals/contact_agent_modal.html' %}
+{% endif %}
+
+{% if current_user.is_authenticated and user_role == 'agent' %}
+{% include 'modals/suggest_price_modal.html' %}
+{% endif %}
+
+<!-- Ajouter le modal pour contacter le propriétaire -->
+{% if current_user.is_authenticated and user_role == 'agent' %}
+<div class="modal fade" id="contactOwnerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Contacter le propriétaire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('contact_agent') }}">
+                    <input type="hidden" name="property_id" value="{{ property._id }}">
+                    <input type="hidden" name="recipient_id" value="{{ property.created_by }}">
+                    
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Sujet</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message</label>
+                        <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var carousel = document.getElementById('propertyCarousel');
+    if (carousel) {
+        new bootstrap.Carousel(carousel);
+    }
+});
+
+function deleteProperty(propertyId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce bien ?')) {
+        fetch(`/property/${propertyId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors de la suppression');
+        });
+    }
+}
+</script>
+{% endblock %}

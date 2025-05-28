@@ -1,0 +1,93 @@
+<!-- Modal Demande de Visite -->
+<div class="modal fade" id="visitRequestModal" tabindex="-1" aria-labelledby="visitRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="visitRequestModalLabel">Demander une visite</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="visitRequestForm" action="{{ url_for('schedule_visit') }}" method="POST" onsubmit="return validateVisitForm()">
+                <div class="modal-body">
+                    <div class="alert alert-danger" id="visitFormError" style="display: none;"></div>
+                    
+                    <input type="hidden" name="property_id" value="{{ property._id }}">
+                    
+                    <div class="mb-3">
+                        <label for="visit_date" class="form-label">Date et heure souhaitées</label>
+                        <input type="datetime-local" class="form-control" id="visit_date" name="date" required 
+                               min="{{ now.strftime('%Y-%m-%dT%H:%M') }}">
+                        <small class="form-text text-muted">Choisissez une date et une heure futures</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="visit_notes" class="form-label">Notes ou questions</label>
+                        <textarea class="form-control" id="visit_notes" name="notes" rows="3" 
+                                placeholder="Précisez vos disponibilités ou questions particulières"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Demander la visite</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function validateVisitForm() {
+    const dateInput = document.getElementById('visit_date');
+    const errorDiv = document.getElementById('visitFormError');
+    const selectedDate = new Date(dateInput.value);
+    const now = new Date();
+
+    // Réinitialiser le message d'erreur
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+
+    // Vérifier si une date est sélectionnée
+    if (!dateInput.value) {
+        errorDiv.textContent = 'Veuillez sélectionner une date et une heure';
+        errorDiv.style.display = 'block';
+        return false;
+    }
+
+    // Vérifier si la date est dans le futur
+    if (selectedDate <= now) {
+        errorDiv.textContent = 'La date de visite doit être dans le futur';
+        errorDiv.style.display = 'block';
+        return false;
+    }
+
+    // Formater la date au format attendu par le serveur
+    const formattedDate = selectedDate.toLocaleString('fr-FR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).replace(',', '');
+
+    // Créer un champ caché pour envoyer la date formatée
+    const hiddenDateInput = document.createElement('input');
+    hiddenDateInput.type = 'hidden';
+    hiddenDateInput.name = 'formatted_date';
+    hiddenDateInput.value = formattedDate;
+    document.getElementById('visitRequestForm').appendChild(hiddenDateInput);
+
+    return true;
+}
+
+// Définir la date minimale au moment actuel
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('visit_date');
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    dateInput.min = `${year}-${month}-${day}T${hours}:${minutes}`;
+});
+</script>

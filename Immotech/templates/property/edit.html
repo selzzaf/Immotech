@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier le bien{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Modifier le bien immobilier</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" enctype="multipart/form-data">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Titre</label>
+                    <input type="text" class="form-control" id="title" name="title" value="{{ property.title }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="type" class="form-label">Type de bien</label>
+                    <select class="form-control" id="type" name="type" required>
+                        <optgroup label="Résidentiel">
+                            <option value="apartment" {% if property.type == 'apartment' %}selected{% endif %}>Appartement</option>
+                            <option value="house" {% if property.type == 'house' %}selected{% endif %}>Maison</option>
+                            <option value="villa" {% if property.type == 'villa' %}selected{% endif %}>Villa</option>
+                            <option value="duplex" {% if property.type == 'duplex' %}selected{% endif %}>Duplex</option>
+                            <option value="studio" {% if property.type == 'studio' %}selected{% endif %}>Studio</option>
+                            <option value="riad" {% if property.type == 'riad' %}selected{% endif %}>Riad</option>
+                        </optgroup>
+                        <optgroup label="Commercial">
+                            <option value="office" {% if property.type == 'office' %}selected{% endif %}>Bureau</option>
+                            <option value="shop" {% if property.type == 'shop' %}selected{% endif %}>Local commercial</option>
+                            <option value="warehouse" {% if property.type == 'warehouse' %}selected{% endif %}>Entrepôt</option>
+                            <option value="industrial" {% if property.type == 'industrial' %}selected{% endif %}>Local industriel</option>
+                        </optgroup>
+                        <optgroup label="Terrain">
+                            <option value="land_residential" {% if property.type == 'land_residential' %}selected{% endif %}>Terrain résidentiel</option>
+                            <option value="land_commercial" {% if property.type == 'land_commercial' %}selected{% endif %}>Terrain commercial</option>
+                            <option value="land_agricultural" {% if property.type == 'land_agricultural' %}selected{% endif %}>Terrain agricole</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="transaction_type" class="form-label">Type de transaction</label>
+                    <select class="form-control" id="transaction_type" name="transaction_type" required>
+                        <option value="sale" {% if property.transaction_type == 'sale' %}selected{% endif %}>Vente</option>
+                        <option value="rental" {% if property.transaction_type == 'rental' %}selected{% endif %}>Location</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="price" class="form-label">Prix (DH)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="price" name="price" value="{{ property.price }}" required>
+                        <span class="input-group-text rental-period {% if property.transaction_type != 'rental' %}d-none{% endif %}">/ mois</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="surface" class="form-label">Surface (m²)</label>
+                    <input type="number" class="form-control" id="surface" name="surface" value="{{ property.surface }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="rooms" class="form-label">Nombre de pièces</label>
+                    <input type="number" class="form-control" id="rooms" name="rooms" value="{{ property.rooms }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="address" class="form-label">Adresse</label>
+                    <input type="text" class="form-control" id="address" name="address" value="{{ property.location.address }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="city" class="form-label">Ville</label>
+                    <input type="text" class="form-control" id="city" name="city" value="{{ property.location.city }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="postal_code" class="form-label">Code postal</label>
+                    <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ property.location.postal_code }}" required>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="latitude" class="form-label">Latitude</label>
+                            <input type="number" step="any" class="form-control" id="latitude" name="latitude" value="{{ property.location.coordinates[1] }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="longitude" class="form-label">Longitude</label>
+                            <input type="number" step="any" class="form-control" id="longitude" name="longitude" value="{{ property.location.coordinates[0] }}" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="4" required>{{ property.description }}</textarea>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Caractéristiques</label>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="features" value="parking" id="feature_parking"
+                               {% if 'parking' in property.features %}checked{% endif %}>
+                        <label class="form-check-label" for="feature_parking">Parking</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="features" value="elevator" id="feature_elevator"
+                               {% if 'elevator' in property.features %}checked{% endif %}>
+                        <label class="form-check-label" for="feature_elevator">Ascenseur</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="features" value="balcony" id="feature_balcony"
+                               {% if 'balcony' in property.features %}checked{% endif %}>
+                        <label class="form-check-label" for="feature_balcony">Balcon</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="features" value="garden" id="feature_garden"
+                               {% if 'garden' in property.features %}checked{% endif %}>
+                        <label class="form-check-label" for="feature_garden">Jardin</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="status" class="form-label">Statut</label>
+            <select class="form-control" id="status" name="status" required>
+                <option value="available" {% if property.status == 'available' %}selected{% endif %}>Disponible</option>
+                <option value="pending" {% if property.status == 'pending' %}selected{% endif %}>Sous option</option>
+                <option value="sold" {% if property.status == 'sold' %}selected{% endif %}>Vendu</option>
+            </select>
+        </div>
+        
+        {% if property.images %}
+        <div class="mb-3">
+            <label class="form-label">Images existantes</label>
+            <div class="row">
+                {% for image in property.images %}
+                <div class="col-md-3 mb-3">
+                    <div class="card">
+                        <img src="{{ image }}" class="card-img-top" alt="Image du bien">
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="delete_images" value="{{ loop.index0 }}" id="delete_image_{{ loop.index }}">
+                                <label class="form-check-label" for="delete_image_{{ loop.index }}">
+                                    Supprimer
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="mb-3">
+            <label for="new_images" class="form-label">Ajouter de nouvelles images</label>
+            <input type="file" class="form-control" id="new_images" name="new_images" multiple accept="image/*">
+        </div>
+        
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+            <a href="{{ url_for('view_property', property_id=property._id) }}" class="btn btn-secondary">Annuler</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('transaction_type').addEventListener('change', function() {
+    const rentalPeriod = document.querySelector('.rental-period');
+    if (this.value === 'rental') {
+        rentalPeriod.classList.remove('d-none');
+    } else {
+        rentalPeriod.classList.add('d-none');
+    }
+});
+</script>
+{% endblock %} 

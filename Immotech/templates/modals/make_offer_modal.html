@@ -1,0 +1,49 @@
+<!-- Modal Poster une Offre -->
+<div class="modal fade" id="makeOfferModal" tabindex="-1" aria-labelledby="makeOfferModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="makeOfferModalLabel">Poster une offre</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('create_offer', property_id=property._id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="offer_type" class="form-label">Type d'offre</label>
+                        <select class="form-select" id="offer_type" name="offer_type" required>
+                            <option value="sale">Vente</option>
+                            <option value="rental">Location</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="price" class="form-label">Prix</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="price" name="price" required min="0" step="0.01">
+                            <span class="input-group-text">DH</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">Durée de l'offre</label>
+                        <select class="form-select" id="duration" name="duration" required>
+                            <option value="1_week">1 semaine</option>
+                            <option value="2_weeks">2 semaines</option>
+                            <option value="1_month">1 mois</option>
+                            <option value="3_months">3 mois</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="conditions" class="form-label">Conditions (optionnel)</label>
+                        <textarea class="form-control" id="conditions" name="conditions" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Publier l'offre</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

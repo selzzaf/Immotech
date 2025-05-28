@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">Mes notifications</h2>
+            
+            {% if notifications %}
+                {% for notif in notifications %}
+                <div class="card mb-3" id="notification-{{ notif._id }}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if notif.link %}
+                                <a href="{{ notif.link }}" class="text-decoration-none text-dark">{{ notif.message }}</a>
+                                {% else %}
+                                {{ notif.message }}
+                                {% endif %}
+                            </div>
+                            <div class="text-muted">
+                                {{ notif.created_at|datetime }}
+                                {% if not notif.read %}
+                                <button class="btn btn-sm btn-link text-muted p-0 ms-2" 
+                                        onclick="markNotificationRead('{{ notif._id }}')">
+                                    Marquer comme lu
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">Vous n'avez pas de notifications.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

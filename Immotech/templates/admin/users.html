@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des utilisateurs{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestion des utilisateurs</h1>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+            Retour au tableau de bord
+        </a>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="role" class="form-label">Rôle</label>
+                    <select class="form-select" id="role" name="role">
+                        <option value="">Tous les rôles</option>
+                        <option value="client" {% if request.args.get('role') == 'client' %}selected{% endif %}>Client</option>
+                        <option value="agent" {% if request.args.get('role') == 'agent' %}selected{% endif %}>Agent</option>
+                        <option value="admin" {% if request.args.get('role') == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="owner" {% if request.args.get('role') == 'owner' %}selected{% endif %}>Propriétaire</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Recherche</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.args.get('search', '') }}" 
+                           placeholder="Nom ou email">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Filtrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des utilisateurs -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Nom d'utilisateur</th>
+                            <th>Email</th>
+                            <th>Rôle</th>
+                            <th>Date d'inscription</th>
+                            <th>Dernière connexion</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div>{{ user.username }}</div>
+                                {% if user.first_name or user.last_name %}
+                                <small class="text-muted">
+                                    {{ user.first_name }} {{ user.last_name }}
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <select class="form-select form-select-sm role-select" 
+                                        data-user-id="{{ user._id }}"
+                                        onchange="updateUserRole('{{ user._id }}', this.value)">
+                                    <option value="client" {% if user.role == 'client' %}selected{% endif %}>Client</option>
+                                    <option value="agent" {% if user.role == 'agent' %}selected{% endif %}>Agent</option>
+                                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                    <option value="owner" {% if user.role == 'owner' %}selected{% endif %}>Propriétaire</option>
+                                </select>
+                            </td>
+                            <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                {% if user.last_login %}
+                                    {{ user.last_login.strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                    Jamais connecté
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                    {{ 'Actif' if user.is_active else 'Inactif' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-info" 
+                                            onclick="viewUserDetails('{{ user._id }}')">
+                                        Détails
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-warning" 
+                                            onclick="toggleUserStatus('{{ user._id }}')">
+                                        {{ 'Désactiver' if user.is_active else 'Activer' }}
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            onclick="deleteUser('{{ user._id }}')">
+                                        Supprimer
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour les détails utilisateur -->
+<div class="modal fade" id="userDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de l'utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Le contenu sera chargé dynamiquement -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateUserRole(userId, newRole) {
+    fetch(`/admin/user/${userId}/role`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `role=${newRole}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Rôle mis à jour avec succès');
+        } else {
+            alert('Erreur lors de la mise à jour du rôle');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue');
+    });
+}
+
+function toggleUserStatus(userId) {
+    fetch(`/admin/user/${userId}/toggle-status`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue');
+    });
+}
+
+function deleteUser(userId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
+        fetch(`/admin/user/${userId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue');
+        });
+    }
+}
+
+function viewUserDetails(userId) {
+    fetch(`/admin/user/${userId}/details`)
+    .then(response => response.json())
+    .then(data => {
+        const modal = document.querySelector('#userDetailsModal');
+        const modalBody = modal.querySelector('.modal-body');
+        
+        // Construire le contenu HTML avec les détails de l'utilisateur
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Informations personnelles</h6>
+                    <p><strong>Nom:</strong> ${data.first_name} ${data.last_name}</p>
+                    <p><strong>Email:</strong> ${data.email}</p>
+                    <p><strong>Téléphone:</strong> ${data.phone || 'Non renseigné'}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Statistiques</h6>
+                    <p><strong>Propriétés:</strong> ${data.properties_count}</p>
+                    <p><strong>Transactions:</strong> ${data.transactions_count}</p>
+                    <p><strong>Messages:</strong> ${data.messages_count}</p>
+                </div>
+            </div>
+        `;
+        
+        // Afficher le modal
+        new bootstrap.Modal(modal).show();
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors du chargement des détails');
+    });
+}
+</script>
+{% endblock %} 

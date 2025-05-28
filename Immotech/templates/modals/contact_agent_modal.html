@@ -1,0 +1,75 @@
+<!-- Modal de contact -->
+<div class="modal fade" id="contactAgentModal" tabindex="-1" aria-labelledby="contactAgentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactAgentModalLabel">Contacter l'agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="contactForm" action="{{ url_for('contact_agent') }}" method="POST">
+                    <input type="hidden" name="property_id" value="{{ property._id }}">
+                    <input type="hidden" name="recipient_id" value="{% if property.agent_id %}{{ property.agent_id }}{% else %}{{ property.created_by }}{% endif %}">
+                    
+                    <!-- Type de message selon le rôle -->
+                    {% if current_user.is_owner() %}
+                    <input type="hidden" name="type" value="owner_to_agent">
+                    {% else %}
+                    <input type="hidden" name="type" value="client_to_owner">
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Sujet</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message</label>
+                        <textarea class="form-control" id="content" name="content" rows="4" required></textarea>
+                    </div>
+
+                    <!-- Option de visite pour les clients -->
+                    {% if not current_user.is_owner() and not current_user.is_agent() %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="requestVisit" name="request_visit">
+                            <label class="form-check-label" for="requestVisit">
+                                Je souhaite programmer une visite
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 visit-date-container" style="display: none;">
+                        <label for="visitDate" class="form-label">Date souhaitée de visite</label>
+                        <input type="datetime-local" class="form-control" id="visitDate" name="visit_date">
+                    </div>
+                    {% endif %}
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const requestVisitCheckbox = document.getElementById('requestVisit');
+    const visitDateContainer = document.querySelector('.visit-date-container');
+
+    if (requestVisitCheckbox) {
+        requestVisitCheckbox.addEventListener('change', function() {
+            visitDateContainer.style.display = this.checked ? 'block' : 'none';
+            const visitDateInput = document.getElementById('visitDate');
+            if (this.checked) {
+                visitDateInput.setAttribute('required', '');
+            } else {
+                visitDateInput.removeAttribute('required');
+            }
+        });
+    }
+});
+</script>

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Détails de la transaction</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Informations générales</h5>
+                            <p><strong>Type :</strong> {{ transaction.type }}</p>
+                            <p><strong>Montant :</strong> {{ transaction.amount }} DH</p>
+                            <p><strong>Statut :</strong> {{ transaction.status }}</p>
+                            <p><strong>Date de création :</strong> {{ transaction.created_at.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Statuts</h5>
+                            <p><strong>Paiement :</strong> 
+                                <span class="badge bg-{{ 'success' if transaction.payment_status == 'completed' else 'warning' }}">
+                                    {{ transaction.payment_status }}
+                                </span>
+                            </p>
+                            {% if transaction.type == 'rental' %}
+                            <p><strong>Réservation :</strong>
+                                <span class="badge bg-{{ 'success' if transaction.booking_status == 'confirmed' else 'warning' }}">
+                                    {{ transaction.booking_status }}
+                                </span>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>Actions disponibles</h5>
+                            <div class="d-flex gap-2">
+                                {% if transaction.payment_status == 'pending' %}
+                                <a href="{{ url_for('process_payment', transaction_id=transaction._id) }}" 
+                                   class="btn btn-primary">
+                                    Procéder au paiement
+                                </a>
+                                {% endif %}
+
+                                {% if transaction.type == 'rental' and transaction.payment_status == 'completed' and transaction.booking_status == 'pending' %}
+                                <a href="{{ url_for('process_booking', transaction_id=transaction._id) }}" 
+                                   class="btn btn-success">
+                                    Réserver le bien
+                                </a>
+                                {% endif %}
+
+                                {% if transaction.payment_status == 'completed' %}
+                                <a href="{{ url_for('download_contract', transaction_id=transaction._id) }}" 
+                                   class="btn btn-info">
+                                    Télécharger le contrat
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if transaction.payment_details %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>Détails du paiement</h5>
+                            <p><strong>Méthode :</strong> {{ transaction.payment_details.payment_method }}</p>
+                            <p><strong>Date :</strong> {{ transaction.payment_date.strftime('%d/%m/%Y') }}</p>
+                            {% if transaction.payment_details.card_number %}
+                            <p><strong>Carte :</strong> **** **** **** {{ transaction.payment_details.card_number }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if transaction.booking_details %}
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>Détails de la réservation</h5>
+                            <p><strong>Date de début :</strong> {{ transaction.booking_details.start_date }}</p>
+                            <p><strong>Date de fin :</strong> {{ transaction.booking_details.end_date }}</p>
+                            {% if transaction.booking_details.notes %}
+                            <p><strong>Notes :</strong> {{ transaction.booking_details.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Bien concerné</h3>
+                </div>
+                <div class="card-body">
+                    <h5>{{ property.title }}</h5>
+                    <p><strong>Type :</strong> {{ property.type }}</p>
+                    <p><strong>Surface :</strong> {{ property.surface }} m²</p>
+                    <p><strong>Adresse :</strong><br>
+                        {{ property.location.address }}<br>
+                        {{ property.location.postal_code }} {{ property.location.city }}
+                    </p>
+                    {% if property.images and property.images|length > 0 %}
+                    <img src="{{ property.images[0] }}" class="img-fluid rounded" alt="Photo du bien">
+                    {% endif %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('view_property', property_id=property._id) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            Voir le bien
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

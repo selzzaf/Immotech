@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Assistant IA{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Assistant Immobilier</h5>
+                </div>
+                <div class="card-body">
+                    <div id="chat-messages" class="mb-3" style="height: 400px; overflow-y: auto;">
+                        <div class="message system">
+                            Bonjour ! Je suis votre assistant immobilier virtuel. Comment puis-je vous aider aujourd'hui ?
+                        </div>
+                    </div>
+                    <form id="chat-form" class="d-flex">
+                        <input type="text" id="user-input" class="form-control me-2" placeholder="Posez votre question...">
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.message {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 80%;
+}
+
+.message.system {
+    background-color: #f8f9fa;
+    margin-left: 0;
+}
+
+.message.user {
+    background-color: #007bff;
+    color: white;
+    margin-left: auto;
+}
+
+.message.bot {
+    background-color: #e9ecef;
+    margin-right: auto;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const chatMessages = document.getElementById('chat-messages');
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        // Afficher le message de l'utilisateur
+        appendMessage(message, 'user');
+        userInput.value = '';
+
+        // Envoyer la requête au serveur
+        fetch('{{ url_for("chatbot_query") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Afficher la réponse du chatbot
+            appendMessage(data.response, 'bot');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            appendMessage('Désolé, une erreur est survenue. Veuillez réessayer.', 'bot');
+        });
+    });
+
+    function appendMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `message ${type}`;
+        div.textContent = text;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
+</script>
+{% endblock %} 

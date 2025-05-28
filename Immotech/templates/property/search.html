@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Recherche de biens{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Filtres de recherche -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Filtres</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('search_properties') }}">
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Type de bien</label>
+                            <select class="form-control" id="type" name="type">
+                                <option value="">Tous</option>
+                                <option value="apartment" {% if filters.get('type') == 'apartment' %}selected{% endif %}>Appartement</option>
+                                <option value="house" {% if filters.get('type') == 'house' %}selected{% endif %}>Maison</option>
+                                <option value="land" {% if filters.get('type') == 'land' %}selected{% endif %}>Terrain</option>
+                                <option value="commercial" {% if filters.get('type') == 'commercial' %}selected{% endif %}>Local commercial</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="city" class="form-label">Ville</label>
+                            <input type="text" class="form-control" id="city" name="city" value="{{ filters.get('city', '') }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Prix (DH)</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" class="form-control" name="min_price" placeholder="Min" value="{{ filters.get('min_price', '') }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" class="form-control" name="max_price" placeholder="Max" value="{{ filters.get('max_price', '') }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Surface (m²)</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" class="form-control" name="min_surface" placeholder="Min" value="{{ filters.get('min_surface', '') }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" class="form-control" name="max_surface" placeholder="Max" value="{{ filters.get('max_surface', '') }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rooms" class="form-label">Nombre de pièces</label>
+                            <select class="form-control" id="rooms" name="rooms">
+                                <option value="">Tous</option>
+                                {% for i in range(1, 7) %}
+                                <option value="{{ i }}" {% if filters.get('rooms')|string == i|string %}selected{% endif %}>{{ i }}+</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Rechercher</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Résultats de recherche -->
+        <div class="col-md-9">
+            <h2 class="mb-4">Résultats de recherche</h2>
+            <div class="row">
+                {% for property in properties %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <img src="{{ property.image_url|default('https://via.placeholder.com/350x200') }}" class="card-img-top" alt="{{ property.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ property.title }}</h5>
+                            <p class="card-text">{{ property.description[:100] }}...</p>
+                            <p class="card-text">
+                                <strong>Prix:</strong> {{ property.price }} DH<br>
+                                <strong>Surface:</strong> {{ property.surface }} m²<br>
+                                <strong>Pièces:</strong> {{ property.rooms }}<br>
+                                <strong>Ville:</strong> {{ property.location.city }}
+                            </p>
+                            <a href="{{ url_for('view_property', property_id=property._id) }}" class="btn btn-primary">Voir les détails</a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        Aucun bien ne correspond à vos critères de recherche.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

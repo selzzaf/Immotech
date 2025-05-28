@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Paiement de la transaction</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h4>Détails de la transaction</h4>
+                        <p>Montant à payer : {{ transaction.amount }} DH</p>
+                        <p>Type : {{ transaction.type }}</p>
+                    </div>
+
+                    <form method="POST" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="payment_method" class="form-label">Méthode de paiement</label>
+                            <select class="form-select" id="payment_method" name="payment_method" required>
+                                <option value="">Choisir une méthode de paiement</option>
+                                <option value="card">Carte bancaire</option>
+                                <option value="transfer">Virement bancaire</option>
+                            </select>
+                        </div>
+
+                        <div id="card-details" class="mb-3">
+                            <label for="card_number" class="form-label">Numéro de carte</label>
+                            <input type="text" class="form-control" id="card_number" name="card_number" 
+                                   pattern="\d{16}" placeholder="1234 5678 9012 3456" required>
+                            <div class="invalid-feedback">
+                                Veuillez entrer un numéro de carte valide (16 chiffres)
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="expiry" class="form-label">Date d'expiration</label>
+                                    <input type="text" class="form-control" id="expiry" 
+                                           pattern="\d{2}/\d{2}" placeholder="MM/YY" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="cvv" 
+                                           pattern="\d{3}" placeholder="123" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="amount" value="{{ transaction.amount }}">
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                Procéder au paiement
+                            </button>
+                            <a href="{{ url_for('view_transaction', transaction_id=transaction._id) }}" 
+                               class="btn btn-secondary">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.needs-validation');
+    const paymentMethod = document.getElementById('payment_method');
+    const cardDetails = document.getElementById('card-details');
+
+    // Gestion de l'affichage des champs de carte
+    paymentMethod.addEventListener('change', function() {
+        if (this.value === 'card') {
+            cardDetails.style.display = 'block';
+            cardDetails.querySelectorAll('input').forEach(input => input.required = true);
+        } else {
+            cardDetails.style.display = 'none';
+            cardDetails.querySelectorAll('input').forEach(input => input.required = false);
+        }
+    });
+
+    // Validation du formulaire
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %} 

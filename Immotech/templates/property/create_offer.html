@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Créer une offre - {{ property.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2 class="mb-4">Créer une offre pour {{ property.title }}</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Informations du bien</h5>
+                    <p class="card-text">
+                        <strong>Prix actuel :</strong> {{ property.price|number_format }} DH<br>
+                        <strong>Type :</strong> {{ property.type }}<br>
+                        <strong>Localisation :</strong> {{ property.location.city }}
+                    </p>
+                </div>
+            </div>
+            
+            <form method="POST" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="title" class="form-label">Titre de l'offre</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                    <div class="invalid-feedback">Veuillez entrer un titre pour l'offre.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description de l'offre</label>
+                    <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                    <div class="invalid-feedback">Veuillez entrer une description.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="offer_price" class="form-label">Prix de l'offre (DH)</label>
+                    <input type="number" class="form-control" id="offer_price" name="offer_price" 
+                           max="{{ property.price }}" step="1000" required>
+                    <div class="invalid-feedback">Le prix doit être inférieur au prix actuel.</div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Date de début</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   min="{{ now.strftime('%Y-%m-%d') }}" required>
+                            <div class="invalid-feedback">Veuillez choisir une date de début.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">Date de fin</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                            <div class="invalid-feedback">Veuillez choisir une date de fin.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="conditions" class="form-label">Conditions particulières (optionnel)</label>
+                    <textarea class="form-control" id="conditions" name="conditions" rows="3"></textarea>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Créer l'offre</button>
+                    <a href="{{ url_for('view_property', property_id=property._id) }}" class="btn btn-outline-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Validation du formulaire
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+
+// Validation des dates
+document.getElementById('start_date').addEventListener('change', function() {
+    document.getElementById('end_date').min = this.value;
+});
+</script>
+{% endblock %}
+
+{% endblock %} 

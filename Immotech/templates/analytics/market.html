@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Analyse du marché{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Analyse du marché immobilier</h1>
+
+    {% if report %}
+    <div class="row">
+        <!-- Statistiques générales -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Statistiques générales</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Total des biens :</strong> {{ report.total_properties }}</li>
+                        <li><strong>Biens disponibles :</strong> {{ report.available_properties }}</li>
+                        <li><strong>Prix moyen :</strong> {{ report.average_price|number_format(2) }} DH</li>
+                        <li><strong>Prix moyen au m² :</strong> {{ report.price_per_sqm|number_format(2) }} DH/m²</li>
+                        <li><strong>Temps moyen sur le marché :</strong> {{ report.average_time_on_market|number_format(1) }} jours</li>
+                        <li><strong>Taux de négociation moyen :</strong> {{ report.negotiation_rate|number_format(1) }}%</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique d'évolution des prix -->
+        {% if report.price_trend %}
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Évolution des prix</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Distribution des surfaces -->
+        {% if report.surface_distribution %}
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Distribution des surfaces</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="surfaceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if report.price_trend or report.surface_distribution %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        {% if report.price_trend %}
+        // Graphique d'évolution des prix
+        try {
+            const priceCtx = document.getElementById('priceChart').getContext('2d');
+            new Chart(priceCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ report.price_trend | map(attribute='period') | list | tojson | safe }},
+                    datasets: [{
+                        label: 'Prix moyen',
+                        data: {{ report.price_trend | map(attribute='price') | list | tojson | safe }},
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Évolution des prix sur les 6 derniers mois'
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Erreur lors de la création du graphique des prix:', error);
+        }
+        {% endif %}
+
+        {% if report.surface_distribution %}
+        // Graphique de distribution des surfaces
+        try {
+            const surfaceCtx = document.getElementById('surfaceChart').getContext('2d');
+            new Chart(surfaceCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ report.surface_distribution.keys() | list | tojson | safe }},
+                    datasets: [{
+                        label: 'Nombre de biens',
+                        data: {{ report.surface_distribution.values() | list | tojson | safe }},
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribution des surfaces (m²)'
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Erreur lors de la création du graphique des surfaces:', error);
+        }
+        {% endif %}
+    </script>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        Aucune donnée disponible pour les critères sélectionnés.
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

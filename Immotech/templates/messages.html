@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Messages{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">Mes messages</h2>
+            
+            <!-- Onglets -->
+            <ul class="nav nav-tabs mb-4" id="messagesTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="received-tab" data-bs-toggle="tab" data-bs-target="#received" type="button">
+                        Messages reçus 
+                        {% if unread_messages_count > 0 %}
+                        <span class="badge bg-danger">{{ unread_messages_count }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button">
+                        Messages envoyés
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Contenu des onglets -->
+            <div class="tab-content" id="messagesTabContent">
+                <!-- Messages reçus -->
+                <div class="tab-pane fade show active" id="received" role="tabpanel">
+                    {% if received_messages %}
+                        {% for message in received_messages %}
+                        <div class="card mb-3 {% if not message.read %}border-primary{% endif %}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title">{{ message.subject }}</h5>
+                                    <small class="text-muted">{{ message.created_at|datetime }}</small>
+                                </div>
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    De : {{ users[message.sender_id].username }}
+                                    {% if not message.read %}
+                                    <span class="badge bg-primary">Nouveau</span>
+                                    {% endif %}
+                                </h6>
+                                {% if message.property_id and message.property_id in properties %}
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        Concernant : <a href="{{ url_for('view_property', property_id=message.property_id) }}">
+                                            {{ properties[message.property_id].title }}
+                                        </a>
+                                    </small>
+                                </p>
+                                {% endif %}
+                                <p class="card-text">{{ message.content }}</p>
+                                <div class="message-actions">
+                                    {% if not message.read %}
+                                    <button class="btn btn-sm btn-success mark-read" data-message-id="{{ message._id }}">
+                                        <i class="fas fa-check"></i> Marquer comme lu
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-danger delete-message" data-message-id="{{ message._id }}">
+                                        <i class="fas fa-trash"></i> Supprimer
+                                    </button>
+                                    <button class="btn btn-sm btn-primary reply-btn" 
+                                        data-message-id="{{ message._id }}" 
+                                        data-sender-id="{{ message.sender_id }}" 
+                                        data-subject="{{ message.subject }}" 
+                                        {% if message.property_id %}
+                                        data-property-id="{{ message.property_id }}"
+                                        {% endif %}>
+                                        <i class="fas fa-reply"></i> Répondre
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">Vous n'avez pas de messages reçus.</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Messages envoyés -->
+                <div class="tab-pane fade" id="sent" role="tabpanel">
+                    {% if sent_messages %}
+                        {% for message in sent_messages %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title">{{ message.subject }}</h5>
+                                    <small class="text-muted">{{ message.created_at|datetime }}</small>
+                                </div>
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    À : {{ users[message.recipient_id].username }}
+                                </h6>
+                                {% if message.property_id and message.property_id in properties %}
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        Concernant : <a href="{{ url_for('view_property', property_id=message.property_id) }}">
+                                            {{ properties[message.property_id].title }}
+                                        </a>
+                                    </small>
+                                </p>
+                                {% endif %}
+                                <p class="card-text">{{ message.content }}</p>
+                                <div class="message-actions">
+                                    <button class="btn btn-sm btn-danger delete-message" data-message-id="{{ message._id }}">
+                                        <i class="fas fa-trash"></i> Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">Vous n'avez pas de messages envoyés.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de réponse -->
+<div class="modal fade" id="replyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Répondre au message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="replyForm" method="POST" action="{{ url_for('contact_agent') }}">
+                    <input type="hidden" name="recipient_id" id="recipient_id" value="">
+                    <input type="hidden" name="property_id" id="property_id" value="">
+                    
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Sujet</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message</label>
+                        <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function replyToMessage(recipientId, subject, propertyId) {
+    document.getElementById('recipient_id').value = recipientId;
+    document.getElementById('subject').value = 'Re: ' + subject;
+    if (propertyId) {
+        document.getElementById('property_id').value = propertyId;
+    } else {
+        document.getElementById('property_id').value = '';
+    }
+    new bootstrap.Modal(document.getElementById('replyModal')).show();
+}
+
+function markAsRead(messageId) {
+    fetch(`/message/${messageId}/read`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Code pour marquer comme lu
+    document.querySelectorAll('.mark-read').forEach(button => {
+        button.addEventListener('click', function() {
+            const messageId = this.getAttribute('data-message-id');
+            markAsRead(messageId);
+        });
+    });
+    
+    // Code pour la suppression
+    document.querySelectorAll('.delete-message').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
+                const messageId = this.getAttribute('data-message-id');
+                fetch(`/message/${messageId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Supprimer l'élément du message de la page
+                        const messageElement = this.closest('.card');
+                        messageElement.remove();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Une erreur est survenue lors de la suppression du message');
+                });
+            }
+        });
+    });
+    
+    // Gérer les boutons de réponse aux messages
+    document.querySelectorAll('.reply-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const senderId = this.getAttribute('data-sender-id');
+            const subject = this.getAttribute('data-subject');
+            const propertyId = this.getAttribute('data-property-id');
+            replyToMessage(senderId, subject, propertyId);
+        });
+    });
+});
+</script>
+
+<!-- Ajouter le style CSS -->
+<style>
+.message-actions {
+    margin-top: 10px;
+}
+.message-actions .btn {
+    margin-right: 5px;
+}
+</style>
+{% endblock %} 

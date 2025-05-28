@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="jumbotron bg-light p-5 rounded">
+        <h1 class="display-4">Bienvenue sur ImmoTech</h1>
+        <p class="lead">Votre plateforme immobilière intelligente pour acheter, vendre ou louer des biens immobiliers.</p>
+        {% if not current_user.is_authenticated %}
+        <hr class="my-4">
+        <p>Rejoignez-nous pour accéder à toutes les fonctionnalités.</p>
+        <a class="btn btn-primary btn-lg" href="{{ url_for('register') }}" role="button">S'inscrire</a>
+        <a class="btn btn-outline-primary btn-lg" href="{{ url_for('login') }}" role="button">Se connecter</a>
+        {% endif %}
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2>Derniers biens disponibles</h2>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        {% for property in properties %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                {% if property.images and property.images|length > 0 %}
+                <img src="{{ property.images[0] }}" class="card-img-top" alt="{{ property.title }}">
+                {% else %}
+                <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                    <i class="fas fa-home fa-3x"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ property.title }}</h5>
+                    <p class="card-text">{{ property.description[:150] }}...</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-map-marker-alt"></i> {{ property.location.city }}</li>
+                        <li><i class="fas fa-coins"></i> {{ property.price }} DH</li>
+                        <li><i class="fas fa-ruler-combined"></i> {{ property.surface }} m²</li>
+                        <li><i class="fas fa-door-open"></i> {{ property.rooms }} pièces</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('view_property', property_id=property._id) }}" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Voir le bien
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-robot"></i> Assistant IA</h5>
+                    <p class="card-text">Utilisez notre assistant intelligent pour trouver le bien idéal.</p>
+                    <a href="{{ url_for('chatbot') }}" class="btn btn-light">Discuter avec l'assistant</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-line"></i> Analyses du marché</h5>
+                    <p class="card-text">Accédez aux analyses détaillées du marché immobilier.</p>
+                    <a href="{{ url_for('market_analytics') }}" class="btn btn-light">Voir les analyses</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-user"></i> Mon espace</h5>
+                    <p class="card-text">Gérez vos biens et transactions immobilières.</p>
+                    <a href="{{ url_for('user_analytics') }}" class="btn btn-light">Accéder à mon espace</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if current_user.is_authenticated %}
+<!-- Modal Contact -->
+<div class="modal fade" id="contactModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Contacter l'agent immobilier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="contactForm" action="{{ url_for('contact_agent') }}" method="POST">
+                    <input type="hidden" name="property_id" id="property_id">
+                    <input type="hidden" name="recipient_type" value="agent">
+                    
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Sujet</label>
+                        <select class="form-select" id="subject" name="subject" required>
+                            <option value="information">Demande d'information</option>
+                            <option value="visit">Demande de visite</option>
+                            <option value="price">Question sur le prix</option>
+                            <option value="other">Autre demande</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="message" class="form-label">Votre message</label>
+                        <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="send_copy" name="send_copy">
+                            <label class="form-check-label" for="send_copy">
+                                Recevoir une copie par email
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function contactAgent(propertyId) {
+    // Mettre à jour l'ID de la propriété dans le formulaire
+    document.getElementById('property_id').value = propertyId;
+    
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('contactModal'));
+    modal.show();
+}
+
+// Gestionnaire pour le formulaire de contact
+document.getElementById('contactForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erreur réseau');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('contactModal'));
+            modal.hide();
+            
+            // Réinitialiser le formulaire
+            this.reset();
+            
+            // Afficher un message de succès
+            alert(data.message || 'Message envoyé avec succès');
+        } else {
+            // Afficher un message d'erreur
+            alert(data.message || 'Une erreur est survenue lors de l\'envoi du message');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors de l\'envoi du message. Veuillez réessayer.');
+    });
+});
+</script>
+{% endif %}
+{% endblock %} 

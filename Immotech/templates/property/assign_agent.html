@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Assigner un agent - {{ property.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2 class="mb-4">Assigner un agent pour {{ property.title }}</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Agent actuel</h5>
+                    {% if current_agent_id %}
+                        {% for agent in agents %}
+                            {% if agent._id|string == current_agent_id %}
+                            <p class="card-text">
+                                <strong>{{ agent.username }}</strong><br>
+                                {% if agent.email %}
+                                <i class="fas fa-envelope"></i> {{ agent.email }}<br>
+                                {% endif %}
+                                {% if agent.phone %}
+                                <i class="fas fa-phone"></i> {{ agent.phone }}
+                                {% endif %}
+                            </p>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="card-text text-muted">Aucun agent assigné</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <form method="POST" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="agent_id" class="form-label">Sélectionner un agent</label>
+                    <select class="form-select" id="agent_id" name="agent_id" required>
+                        <option value="">Choisir un agent...</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent._id }}" {% if agent._id|string == current_agent_id %}selected{% endif %}>
+                            {{ agent.username }}
+                            {% if agent.email %} - {{ agent.email }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="invalid-feedback">Veuillez sélectionner un agent.</div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Assigner l'agent</button>
+                    <a href="{{ url_for('view_property', property_id=property._id) }}" class="btn btn-outline-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Validation du formulaire
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
+{% endblock %}
+
+{% endblock %} 

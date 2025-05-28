@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord administrateur{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Tableau de bord administrateur</h1>
+
+    <!-- Statistiques générales -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Utilisateurs</h5>
+                    <h2 class="card-text">{{ total_users }}</h2>
+                    <p class="text-muted">Total des utilisateurs inscrits</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Propriétés</h5>
+                    <h2 class="card-text">{{ total_properties }}</h2>
+                    <p class="text-muted">Total des biens immobiliers</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Transactions</h5>
+                    <h2 class="card-text">{{ total_transactions }}</h2>
+                    <p class="text-muted">Total des transactions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gestion des utilisateurs -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>Gestion des utilisateurs</h4>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-primary btn-sm">Voir tous</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nom d'utilisateur</th>
+                            <th>Email</th>
+                            <th>Rôle</th>
+                            <th>Date d'inscription</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <select class="form-select form-select-sm role-select" 
+                                        data-user-id="{{ user._id }}"
+                                        onchange="updateUserRole('{{ user._id }}', this.value)">
+                                    <option value="client" {% if user.role == 'client' %}selected{% endif %}>Client</option>
+                                    <option value="agent" {% if user.role == 'agent' %}selected{% endif %}>Agent</option>
+                                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                    <option value="owner" {% if user.role == 'owner' %}selected{% endif %}>Propriétaire</option>
+                                </select>
+                            </td>
+                            <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="deleteUser('{{ user._id }}')">
+                                    Supprimer
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Propriétés récentes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Propriétés récentes</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Type</th>
+                            <th>Prix</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for property in properties %}
+                        <tr>
+                            <td>{{ property.title }}</td>
+                            <td>{{ property.type }}</td>
+                            <td>{{ property.price }} DH</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if property.status == 'available' else 'secondary' }}">
+                                    {{ property.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('view_property', property_id=property._id) }}" 
+                                   class="btn btn-info btn-sm">Voir</a>
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="deleteProperty('{{ property._id }}')">
+                                    Supprimer
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dernières transactions -->
+    <div class="card">
+        <div class="card-header">
+            <h4>Dernières transactions</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ transaction.type }}</td>
+                            <td>{{ transaction.amount }} €</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if transaction.status == 'completed' else 'warning' }}">
+                                    {{ transaction.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('view_transaction', transaction_id=transaction._id) }}" 
+                                   class="btn btn-info btn-sm">Détails</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts pour les actions administrateur -->
+<script>
+function updateUserRole(userId, newRole) {
+    fetch(`/admin/user/${userId}/role`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `role=${newRole}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Optionnel : afficher un message de succès
+            alert('Rôle mis à jour avec succès');
+        } else {
+            alert('Erreur lors de la mise à jour du rôle');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue');
+    });
+}
+
+function deleteUser(userId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+        fetch(`/admin/user/${userId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors de la suppression');
+        });
+    }
+}
+
+function deleteProperty(propertyId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette propriété ?')) {
+        fetch(`/property/${propertyId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+venv
+.vscode
+__pycache__/
+.flaskenv
+.env
+
+Pipfile

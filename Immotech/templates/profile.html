@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Profil{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Informations du profil -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Informations personnelles</h5>
+                    <p><strong>Nom d'utilisateur:</strong> {{ user.username }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Rôle:</strong> 
+                        {% if user.role == 'admin' %}
+                            Administrateur
+                        {% elif user.role == 'agent' %}
+                            Agent immobilier
+                        {% elif user.role == 'owner' %}
+                            Propriétaire
+                        {% else %}
+                            Client
+                        {% endif %}
+                    </p>
+                    <p><strong>Membre depuis:</strong> {{ user.created_at|datetime }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages non lus -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Messages non lus ({{ unread_messages|length }})</h5>
+                    {% if unread_messages %}
+                        <div class="list-group">
+                            {% for message in unread_messages %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ message.subject }}</h6>
+                                        <small>{{ message.created_at|datetime }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ message.content }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Aucun message non lu</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if current_user.is_owner() %}
+                <!-- Biens immobiliers -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Mes biens immobiliers</h5>
+                        {% if properties %}
+                            <div class="list-group">
+                                {% for property in properties %}
+                                    <a href="{{ url_for('view_property', property_id=property._id) }}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ property.title }}</h6>
+                                            <small>{{ property.price|number_format }} €</small>
+                                        </div>
+                                        <p class="mb-1">{{ property.location.city }}</p>
+                                        <small>{{ property.status }}</small>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Aucun bien immobilier</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Visites -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Mes visites</h5>
+                    {% if visits %}
+                        <div class="list-group">
+                            {% for visit in visits %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Visite du {{ visit.date|datetime }}</h6>
+                                        <span class="badge bg-{{ visit.status|status_color }}">
+                                            {{ visit.status|status_label }}
+                                        </span>
+                                    </div>
+                                    {% if visit.notes %}
+                                        <p class="mb-1">{{ visit.notes }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Aucune visite programmée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

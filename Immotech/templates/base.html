@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImmoTech - {% block title %}Accueil{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .notification-item {
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 100%;
+            padding: 10px;
+        }
+        .notification-message {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-top: 5px;
+        }
+        .notification-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .notifications-dropdown {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home') }}">ImmoTech</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">Accueil</a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.is_agent() %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="visitsDropdown" role="button" data-bs-toggle="dropdown">
+                                Visites
+                                {% if pending_visits_count is not none and pending_visits_count > 0 %}
+                                <span class="badge bg-danger">{{ pending_visits_count }}</span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('manage_visits') }}">Toutes les visites</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_visits', filter='pending') }}">En attente 
+                                    {% if pending_visits_count is not none and pending_visits_count > 0 %}
+                                    <span class="badge bg-danger">{{ pending_visits_count }}</span>
+                                    {% endif %}
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_visits', filter='confirmed') }}">Confirmées</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_visits', filter='completed') }}">Terminées</a></li>
+                            </ul>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('manage_visits') }}">
+                                <i class="fas fa-calendar"></i> Mes visites
+                                {% if user_visits_count is not none and user_visits_count > 0 %}
+                                <span class="badge bg-danger">{{ user_visits_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if current_user.is_owner() %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('add_property') }}">
+                                <i class="fas fa-plus"></i> Ajouter un bien
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if current_user.is_agent() or current_user.is_owner() or current_user.is_admin() %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('market_analytics') }}">
+                                <i class="fas fa-chart-line"></i> Analyse du marché
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('view_messages') }}">
+                                Messages
+                                {% if unread_messages_count is not none and unread_messages_count > 0 %}
+                                <span class="badge bg-danger">{{ unread_messages_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <!-- Notifications -->
+                {% if current_user.is_authenticated %}
+                <div class="nav-item dropdown me-3">
+                    <a class="nav-link dropdown-toggle text-white" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell"></i>
+                        {% if notifications_count is not none and notifications_count > 0 %}
+                        <span class="badge bg-danger">{{ notifications_count }}</span>
+                        {% endif %}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end notifications-dropdown" style="width: 300px;">
+                        <h6 class="dropdown-header">Notifications</h6>
+                        {% if notifications %}
+                            {% for notif in notifications %}
+                            <div class="notification-item" id="notification-{{ notif._id }}">
+                                <div class="notification-time">{{ notif.created_at|datetime }}</div>
+                                <div class="notification-message">
+                                    {% if notif.link %}
+                                    <a href="{{ notif.link }}" class="text-decoration-none text-dark">{{ notif.message }}</a>
+                                    {% else %}
+                                    {{ notif.message }}
+                                    {% endif %}
+                                </div>
+                                <button class="btn btn-sm btn-link text-muted p-0 mt-1" 
+                                        onclick="markNotificationRead('{{ notif._id }}')">
+                                    Marquer comme lu
+                                </button>
+                            </div>
+                            {% if not loop.last %}
+                            <div class="dropdown-divider"></div>
+                            {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <div class="dropdown-item text-muted">Aucune notification</div>
+                        {% endif %}
+                        {% if notifications_count is not none and notifications_count > 5 %}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-center" href="{{ url_for('view_notifications') }}">
+                                Voir toutes les notifications
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Menu utilisateur -->
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('user_profile') }}">Mon Profil</a></li>
+                            {% if current_user.is_admin() %}
+                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">Administration</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Déconnexion</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Connexion</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Inscription</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <main class="py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>ImmoTech</h5>
+                    <p>Votre plateforme immobilière intelligente</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p>&copy; 2025 ImmoTech. Tous droits réservés.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-code.js"></script>
+    {% block scripts %}
+    <script>
+    function markNotificationRead(notificationId) {
+        fetch(`/notification/mark-read/${notificationId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                try {
+                    // Supprimer la notification de l'affichage (tous les éléments avec cet ID)
+                    const notifElements = document.querySelectorAll(`[id="notification-${notificationId}"]`);
+                    
+                    notifElements.forEach(notifElement => {
+                        // Gérer les séparateurs avant de supprimer l'élément
+                        const nextElement = notifElement.nextElementSibling;
+                        if (nextElement && nextElement.classList.contains('dropdown-divider')) {
+                            nextElement.remove();
+                        }
+                        
+                        const prevElement = notifElement.previousElementSibling;
+                        if (prevElement && prevElement.classList.contains('dropdown-divider')) {
+                            // Si c'est le dernier élément avec un séparateur avant
+                            if (!notifElement.nextElementSibling || 
+                                (notifElement.nextElementSibling && !notifElement.nextElementSibling.classList.contains('notification-item'))) {
+                                prevElement.remove();
+                            }
+                        }
+                        
+                        // Supprimer la notification
+                        notifElement.remove();
+                    });
+                    
+                    // Mettre à jour le compteur de notifications
+                    const badge = document.querySelector('#notificationsDropdown .badge');
+                    if (badge) {
+                        let count = parseInt(badge.textContent || '0');
+                        if (count > 0) {
+                            count--;
+                            if (count === 0) {
+                                badge.remove();
+                                
+                                // Vérifier s'il reste des notifications
+                                const remainingNotifs = document.querySelectorAll('.notification-item');
+                                if (remainingNotifs.length === 0) {
+                                    // Ajouter le message "Aucune notification"
+                                    const dropdownMenu = document.querySelector('.notifications-dropdown');
+                                    if (dropdownMenu) {
+                                        // Supprimer tous les séparateurs restants
+                                        dropdownMenu.querySelectorAll('.dropdown-divider').forEach(div => div.remove());
+                                        
+                                        // Ajouter le message vide s'il n'existe pas déjà
+                                        if (!dropdownMenu.querySelector('.dropdown-item.text-muted')) {
+                                            const emptyMessage = document.createElement('div');
+                                            emptyMessage.className = 'dropdown-item text-muted';
+                                            emptyMessage.textContent = 'Aucune notification';
+                                            dropdownMenu.appendChild(emptyMessage);
+                                        }
+                                    }
+                                }
+                            } else {
+                                badge.textContent = count;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Erreur lors de la manipulation du DOM:', err);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du marquage de la notification:', error);
+        });
+    }
+    </script>
+    {% endblock %}
+</body>
+</html> 
