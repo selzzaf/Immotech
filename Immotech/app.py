@@ -1,52 +1,94 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+# ======================================================
+# IMMOTECH - Plateforme de gestion immobilière
+# ======================================================
+# Ce fichier est le point d'entrée principal de l'application.
+# Il contient la configuration de l'application Flask, les connexions
+# à la base de données MongoDB, et toutes les routes de l'application.
+# ======================================================
+
+# ======== Importations des bibliothèques standards ========
+import os
+import sys
+import bcrypt
+import logging
+import traceback
+from datetime import datetime, timedelta
+from werkzeug.utils import secure_filename
+
+# ======== Importations des bibliothèques externes ========
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
 from bson import ObjectId
-import os
-import bcrypt
-import sys
-from werkzeug.utils import secure_filename
-import logging
-import traceback
 from waitress import serve
 
-# Add the current directory to Python path
+# Ajout du répertoire courant au chemin Python pour permettre les importations relatives
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Import the chatbot instance
+# ======== Importations des modules internes ========
+# Instance du chatbot pour l'assistance aux utilisateurs
 from chatbot import chatbot_instance
+# Gestionnaire des transactions immobilières
 from transactions import TransactionManager
+# Gestionnaire des analyses et statistiques
 from analytics import AnalyticsManager
 
-# Load environment variables
+# Chargement des variables d'environnement depuis le fichier .env
 load_dotenv()
 
-# Create Flask app
+# ======== Configuration de l'application Flask ========
+# Création de l'instance de l'application Flask
 app = Flask(__name__)
+
+# Configuration de la clé secrète pour les sessions et les tokens CSRF
+# Utilise la variable d'environnement SECRET_KEY ou une valeur par défaut si non définie
 app.secret_key = os.getenv('SECRET_KEY', 'votre_clé_secrète_ici')
+
+# Configuration des paramètres de sécurité et de performance de l'application
 app.config.update(
+    # Désactivation du mode débogage en production
     DEBUG=False,
+    # Désactivation du rechargement automatique des templates pour améliorer les performances
     TEMPLATES_AUTO_RELOAD=False,
+    # Sécurisation des cookies de session (uniquement transmis via HTTPS)
     SESSION_COOKIE_SECURE=True,
+    # Protection contre les attaques XSS en empêchant l'accès aux cookies via JavaScript
     SESSION_COOKIE_HTTPONLY=True,
+    # Protection contre les attaques CSRF en limitant l'envoi des cookies aux requêtes du même site
     SESSION_COOKIE_SAMESITE='Lax',
+    # Schéma d'URL préféré pour la génération des URLs
     PREFERRED_URL_SCHEME='http'
 )
 
-# Configuration pour les uploads
+# ======== Configuration du système d'upload de fichiers ========
+# Définition du dossier de stockage des fichiers uploadés
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+
+# Extensions de fichiers autorisées pour les uploads (images uniquement)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
+# Fonction de validation des extensions de fichiers
 def allowed_file(filename):
+    """Vérifie si un fichier a une extension autorisée
+    
+    Args:
+        filename (str): Nom du fichier à vérifier
+        
+    Returns:
+        bool: True si l'extension est autorisée, False sinon
+    """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Créer le dossier uploads s'il n'existe pas
+# Création du dossier d'uploads s'il n'existe pas encore
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# MongoDB connection
+# ======== Configuration de la connexion MongoDB ========
+# Établissement de la connexion au serveur MongoDB
+# Utilise l'URI de connexion depuis les variables d'environnement ou une valeur par défaut
 client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://localhost:27017/'))
+
+# Sélection de la base de données à utiliser
 db = client[os.getenv('DATABASE_NAME', 'immotech')]
 
 # Collections
@@ -119,35 +161,45 @@ db = client[os.getenv('DATABASE_NAME', 'immotech')]
 
 # Initialize managers
 transaction_manager = TransactionManager(db)
-app.analytics_manager = AnalyticsManager(db)  # Store as app attribute
-analytics_manager = app.analytics_manager  # Create a reference for convenience
+app.analytics_manager = AnalyticsManager(db)  
+analytics_manager = app.analytics_manager  
 
 # Verify managers
 logger = logging.getLogger(__name__)
 logger.info("Initializing managers...")
-logger.info(f"Transaction manager initialized: {transaction_manager is not None}")
-logger.info(f"Analytics manager initialized: {analytics_manager is not None}")
-
-# Verify chatbot instance
-logger.info(f"Using chatbot instance: {type(chatbot_instance)}")
-
-# Collections
-users_collection = db['users']
 properties_collection = db['properties']
+
+# Collection des transactions (ventes, locations)
 transactions_collection = db['transactions']
+
+# Collection des documents associés aux propriétés et transactions
 documents_collection = db['documents']
-messages_collection = db['messages']  # Nouvelle collection pour les messages
+
+# Collection des messages entre utilisateurs
+messages_collection = db['messages']
+
+# Collection des notifications système pour les utilisateurs
 notifications_collection = db['notifications']
 
-# User roles
+# ======== Configuration des rôles utilisateurs ========
+# Définition des rôles disponibles dans l'application
+# - client: utilisateur cherchant à acheter/louer un bien
+# - agent: agent immobilier gérant les propriétés et les clients
+# - admin: administrateur de la plateforme avec accès complet
+# - owner: propriétaire d'un bien immobilier
 ROLE_ADMIN = 'admin'
 ROLE_AGENT = 'agent'
 ROLE_CLIENT = 'client'
 ROLE_OWNER = 'owner'
 
-# Flask-Login configuration
+# ======== Configuration de Flask-Login ========
+# Initialisation du gestionnaire d'authentification
 login_manager = LoginManager()
+
+# Association du gestionnaire d'authentification à l'application Flask
 login_manager.init_app(app)
+
+# Définition de la route de redirection en cas de tentative d'accès à une page protégée
 login_manager.login_view = 'login'
 
 # Configuration du logging
@@ -161,13 +213,37 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ======== Modèle d'utilisateur pour Flask-Login ========
 class User(UserMixin):
+    """Classe représentant un utilisateur de l'application.
+    
+    Hérite de UserMixin de Flask-Login pour fournir les méthodes requises par Flask-Login.
+    Encapsule les données utilisateur stockées dans MongoDB et fournit des méthodes
+    utilitaires pour vérifier les rôles et permissions.
+    
+    Attributes:
+        user_data (dict): Données brutes de l'utilisateur depuis MongoDB
+        id (str): Identifiant unique de l'utilisateur (converti en string depuis ObjectId)
+        email (str): Adresse email de l'utilisateur
+        username (str): Nom d'utilisateur
+        role (str): Rôle de l'utilisateur (client, agent, admin, propriétaire)
+        first_name (str): Prénom de l'utilisateur
+        last_name (str): Nom de famille de l'utilisateur
+        phone (str): Numéro de téléphone
+        created_at (datetime): Date de création du compte
+        preferences (dict): Préférences utilisateur (recherches sauvegardées, etc.)
+    """
     def __init__(self, user_data):
+        """Initialise un nouvel objet utilisateur à partir des données MongoDB.
+        
+        Args:
+            user_data (dict): Dictionnaire contenant les données utilisateur depuis MongoDB
+        """
         self.user_data = user_data
         self.id = str(user_data['_id'])
         self.email = user_data['email']
         self.username = user_data['username']
-        self.role = user_data.get('role', ROLE_CLIENT)
+        self.role = user_data.get('role', ROLE_CLIENT)  # Par défaut, rôle client
         self.first_name = user_data.get('first_name', '')
         self.last_name = user_data.get('last_name', '')
         self.phone = user_data.get('phone', '')
@@ -175,39 +251,96 @@ class User(UserMixin):
         self.preferences = user_data.get('preferences', {})
         
     def is_admin(self):
+        """Vérifie si l'utilisateur a le rôle d'administrateur.
+        
+        Returns:
+            bool: True si l'utilisateur est administrateur, False sinon
+        """
         return self.role == ROLE_ADMIN
         
     def is_agent(self):
+        """Vérifie si l'utilisateur a le rôle d'agent immobilier.
+        
+        Returns:
+            bool: True si l'utilisateur est agent immobilier, False sinon
+        """
         return self.role == ROLE_AGENT
         
     def is_owner(self):
+        """Vérifie si l'utilisateur a le rôle de propriétaire.
+        
+        Returns:
+            bool: True si l'utilisateur est propriétaire, False sinon
+        """
         return self.role == ROLE_OWNER
 
     def is_client(self):
+        """Vérifie si l'utilisateur a le rôle de client.
+        
+        Returns:
+            bool: True si l'utilisateur est client, False sinon
+        """
         return self.role == ROLE_CLIENT
 
     def get_id(self):
+        """Retourne l'identifiant unique de l'utilisateur sous forme de chaîne.
+        
+        Cette méthode est requise par Flask-Login.
+        
+        Returns:
+            str: L'identifiant unique de l'utilisateur
+        """
         return str(self.id)
 
+# ======== Fonction de chargement d'utilisateur pour Flask-Login ========
 @login_manager.user_loader
 def load_user(user_id):
-    user_data = users_collection.find_one({'_id': ObjectId(user_id)})
-    if user_data:
-        return User(user_data)
-    return None
+    """Charge un utilisateur depuis la base de données par son ID.
+    
+    Cette fonction est utilisée par Flask-Login pour charger l'utilisateur
+    à partir de l'ID stocké dans la session.
+    
+    Args:
+        user_id (str): L'identifiant unique de l'utilisateur à charger
+        
+    Returns:
+        User: L'objet utilisateur si trouvé, None sinon
+    """
+    try:
+        user_data = users_collection.find_one({'_id': ObjectId(user_id)})
+        if user_data:
+            return User(user_data)
+        return None
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement de l'utilisateur {user_id}: {str(e)}")
+        return None
+
+# ======== Routes principales de l'application ========
 
 @app.route('/')
 def home():
+    """Route de la page d'accueil de l'application.
+    
+    Affiche la page d'accueil avec une sélection de propriétés disponibles
+    et des informations spécifiques à l'utilisateur connecté.
+    
+    Returns:
+        str: Le template HTML rendu avec les données nécessaires
+    """
     try:
-        # Utiliser une requête avec limite pour éviter le chargement excessif
+        # Récupérer les propriétés disponibles (limité à 6 pour la page d'accueil)
+        # Utiliser une requête avec limite pour éviter le chargement excessif et optimiser les performances
         properties = list(properties_collection.find({
-            'status': {'$in': ['available', None]}
-        }).limit(6))
+            'status': {'$in': ['available', None]}  # Uniquement les propriétés disponibles
+        }).limit(6))  # Limiter à 6 propriétés pour la page d'accueil
         
-        # Convertir les ObjectId en str une seule fois
+        # Préparer les données des propriétés pour l'affichage
         for prop in properties:
+            # Convertir les ObjectId en str pour la sérialisation JSON
             prop['_id'] = str(prop['_id'])
-            # S'assurer que les champs requis existent
+            
+            # S'assurer que tous les champs requis existent avec des valeurs par défaut
+            # Cela évite les erreurs dans le template si certains champs sont manquants
             prop.setdefault('title', 'Sans titre')
             prop.setdefault('description', '')
             prop.setdefault('price', 0)
@@ -215,21 +348,31 @@ def home():
             prop.setdefault('rooms', 0)
             prop.setdefault('location', {'city': 'Non spécifiée'})
         
-        # Compter les messages non lus une seule fois
+        # Compteur de messages non lus pour l'utilisateur connecté
         unread_messages_count = 0
         if current_user.is_authenticated:
+            # Compter les messages non lus adressés à l'utilisateur courant
             unread_messages_count = messages_collection.count_documents({
                 'recipient_id': ObjectId(current_user.id),
                 'read': False
             })
         
+        # Rendre le template avec les données préparées
         return render_template('home.html',
-                            properties=properties,
-                            unread_messages_count=unread_messages_count)
+                            properties=properties,  # Liste des propriétés à afficher
+                            unread_messages_count=unread_messages_count)  # Nombre de messages non lus
                             
     except Exception as e:
+        # Journalisation détaillée des erreurs pour faciliter le débogage
         logger.error(f"Erreur dans la route home: {str(e)}")
         logger.error(f"Type d'erreur: {type(e)}")
+        logger.error(traceback.format_exc())
+        
+        # Afficher un message d'erreur à l'utilisateur
+        flash('Une erreur est survenue lors du chargement de la page d’accueil', 'error')
+        
+        # Retourner une page d'accueil vide en cas d'erreur
+        return render_template('home.html', properties=[], unread_messages_count=0)
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         # En cas d'erreur, retourner une liste vide
         return render_template('home.html',
@@ -400,7 +543,7 @@ def view_property(property_id):
         })
         property_data.setdefault('images', [])
         
-        # Convertir les ObjectId en str de manière sécurisée
+        # Convertir les ObjectId en str 
         property_data['_id'] = str(property_data['_id'])
         if 'created_by' in property_data:
             property_data['created_by'] = str(property_data['created_by'])
