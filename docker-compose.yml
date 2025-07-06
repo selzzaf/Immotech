@@ -1,0 +1,77 @@
+# ======================================================
+# Docker Compose - Immotech Plateforme de Gestion Immobilière
+# ======================================================
+# 
+# Ce fichier permet de déployer facilement l'application
+# Immotech avec MongoDB en utilisant Docker Compose.
+# 
+# Usage: docker-compose up -d
+# ======================================================
+
+version: '3.8'
+
+services:
+  # Service MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: immotech-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: immotech
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - immotech-network
+
+  # Service Application Immotech
+  app:
+    build: .
+    container_name: immotech-app
+    restart: unless-stopped
+    environment:
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/immotech?authSource=admin
+      - DATABASE_NAME=immotech
+      - SECRET_KEY=${SECRET_KEY:-your_secret_key_here_change_this_in_production}
+      - FLASK_ENV=production
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./Immotech/static/uploads:/app/Immotech/static/uploads
+      - ./Immotech/static/contracts:/app/Immotech/static/contracts
+    depends_on:
+      - mongodb
+    networks:
+      - immotech-network
+
+  # Service Nginx (optionnel, pour la production)
+  nginx:
+    image: nginx:alpine
+    container_name: immotech-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - immotech-network
+    profiles:
+      - production
+
+# Volumes persistants
+volumes:
+  mongodb_data:
+    driver: local
+
+# Réseau personnalisé
+networks:
+  immotech-network:
+    driver: bridge 

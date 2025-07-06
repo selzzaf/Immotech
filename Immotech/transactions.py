@@ -1,3 +1,22 @@
+# ======================================================
+# IMMOTECH - Module de Gestion des Transactions
+# ======================================================
+# 
+# Ce module gère toutes les transactions immobilières de la plateforme,
+# incluant la création, le traitement des paiements, la génération
+# de contrats et le suivi des réservations.
+# 
+# Fonctionnalités :
+# - Création et gestion des transactions
+# - Traitement des paiements
+# - Génération automatique de contrats PDF
+# - Gestion des réservations
+# - Suivi de l'historique des transactions
+# 
+# Version: 1.0.0
+# Licence: MIT
+# ======================================================
+
 from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter

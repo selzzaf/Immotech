@@ -1,3 +1,20 @@
+# ======================================================
+# IMMOTECH - Module Chatbot Intelligent
+# ======================================================
+# 
+# Ce module implémente un chatbot intelligent pour l'assistance
+# aux utilisateurs de la plateforme immobilière.
+# 
+# Fonctionnalités :
+# - Réponses automatiques basées sur des mots-clés
+# - Recherche de propriétés par ville et critères
+# - Suggestions personnalisées selon les préférences utilisateur
+# - Gestion des erreurs et fallbacks
+# 
+# Version: 1.0.0
+# Licence: MIT
+# ======================================================
+
 from flask import jsonify
 import re
 from pymongo import MongoClient

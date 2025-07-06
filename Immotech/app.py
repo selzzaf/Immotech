@@ -2,9 +2,18 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 # ======================================================
 # IMMOTECH - Plateforme de gestion immobilière
 # ======================================================
-# Ce fichier est le point d'entrée principal de l'application.
-# Il contient la configuration de l'application Flask, les connexions
-# à la base de données MongoDB, et toutes les routes de l'application.
+# 
+# Ce fichier est le point d'entrée principal de l'application Flask.
+# Il contient :
+# - Configuration de l'application Flask
+# - Connexion à la base de données MongoDB
+# - Définition de toutes les routes de l'application
+# - Gestion de l'authentification et des autorisations
+# - Système de messagerie et notifications
+# - Gestion des biens immobiliers et transactions
+# 
+# Version: 1.0.0
+# Licence: MIT
 # ======================================================
 
 # ======== Importations des bibliothèques standards ========
@@ -316,7 +325,6 @@ def load_user(user_id):
         return None
 
 # ======== Routes principales de l'application ========
-
 @app.route('/')
 def home():
     """Route de la page d'accueil de l'application.
@@ -369,7 +377,7 @@ def home():
         logger.error(traceback.format_exc())
         
         # Afficher un message d'erreur à l'utilisateur
-        flash('Une erreur est survenue lors du chargement de la page d’accueil', 'error')
+        flash('Une erreur est survenue lors du chargement de la page d\'accueil', 'error')
         
         # Retourner une page d'accueil vide en cas d'erreur
         return render_template('home.html', properties=[], unread_messages_count=0)

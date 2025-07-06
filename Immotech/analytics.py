@@ -1,3 +1,22 @@
+# ======================================================
+# IMMOTECH - Module d'Analyses et Statistiques
+# ======================================================
+# 
+# Ce module gère toutes les analyses et statistiques de la plateforme
+# immobilière, incluant les rapports de marché, les tendances de prix,
+# et les analyses d'activité utilisateur.
+# 
+# Fonctionnalités :
+# - Analyse des tendances de prix
+# - Rapports de marché détaillés
+# - Statistiques d'activité utilisateur
+# - Génération de graphiques et visualisations
+# - Calculs de métriques immobilières
+# 
+# Version: 1.0.0
+# Licence: MIT
+# ======================================================
+
 from datetime import datetime, timedelta
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,7 +27,7 @@ import numpy as np
 from bson import ObjectId
 import logging
 
-# Configure logging
+# Configuration du logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
