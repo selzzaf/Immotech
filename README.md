@@ -202,7 +202,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 Pour toute question ou problème :
 - Ouvrez une issue sur GitHub
-- Contactez-nous via email
+- Contactez moi via email
 
 ---
 
